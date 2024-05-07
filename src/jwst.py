@@ -16,9 +16,9 @@ from astropy import units as u
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
 
-import jwst
 from jwst.pipeline import calwebb_detector1, calwebb_spec2
 from jwst import assign_wcs, datamodels
+from jwst import __version__ as jwstversion
 from gwcs import wcstools
 
 from .utils import *
@@ -323,7 +323,7 @@ class load(object):
             steplist = dir(data.meta.cal_step)
             if 'emicorr' not in steplist:
 
-                print('Warning! Using version ',jwst.__version__,' of the JWST Calibration pipeline, which does NOT have the emicorr step. Upgrade to run the step.')
+                print('Warning! Using version ',jwstversion,' of the JWST Calibration pipeline, which does NOT have the emicorr step. Upgrade to run the step.')
                 self.status['emicorr'] = None
 
             else:
