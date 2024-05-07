@@ -16,6 +16,7 @@ from astropy import units as u
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
 
+import jwst
 from jwst.pipeline import calwebb_detector1, calwebb_spec2
 from jwst import assign_wcs, datamodels
 from gwcs import wcstools
@@ -289,6 +290,7 @@ class load(object):
         self.status['jump'] = data.meta.cal_step.jump
         self.status['ramp_fit'] = data.meta.cal_step.ramp_fit
         self.status['tracing'] = False
+        self.status['centroiding'] = False
 
         # Extract instrument/mode:
         self.instrument = data.meta.instrument.name.lower()
@@ -302,6 +304,10 @@ class load(object):
         
             self.dispersive_element = data.meta.instrument.pupil.lower()
 
+        else:
+
+            self.dispersive_element = 'None'
+
         # Different checks for NIR and MIRI:
         if self.instrument in ['nirspec', 'nircam', 'niriss']:
 
@@ -312,6 +318,17 @@ class load(object):
 
             # Following https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html:
             self.status['reset'] = data.meta.cal_step.reset
+
+            # Cover in case user is using an older version of the JWST pipeline:
+            steplist = dir(data.meta.cal_step)
+            if 'emicorr' not in steplist:
+
+                print('Warning! Using version ',jwst.__version__,' of the JWST Calibration pipeline, which does NOT have the emicorr step. Upgrade to run the step.')
+                self.status['emicorr'] = None
+
+            else:
+
+                self.status['emicorr'] = data.meta.cal_step.emicorr
 
         # Take the chance to populate the mode:
         if self.instrument == 'nirspec' and self.dispersive_element == 'prism':
@@ -333,6 +350,11 @@ class load(object):
 
             print('\t    - Instrument/Mode: NIRISS/SOSS\n')
             self.mode = 'niriss/soss'
+
+        elif self.instrument == 'miri' and self.dispersive_element is 'None':
+
+            print('\t    - Instrument/Mode: MIRI/Photometry ({0:})\n'.format(self.filter.upper()))
+            self.mode = 'miri/photometry'
 
         else:
 
@@ -451,6 +473,10 @@ class load(object):
 
                 elif self.mode == 'niriss/soss':
 
+                    self.calibration_parameters['jump']['window'] = 10
+
+                elif self.mode == 'miri/photometry':
+
                     self.calibration_parameters['jump']['window'] = 10 
 
             if 'nsigma' not in self.calibration_parameters['jump'].keys():
@@ -464,6 +490,10 @@ class load(object):
                     self.calibration_parameters['jump']['nsigma'] = 10
 
                 elif self.mode == 'niriss/soss':
+
+                    self.calibration_parameters['jump']['nsigma'] = 10
+
+                elif self.mode == 'miri/photometry':
 
                     self.calibration_parameters['jump']['nsigma'] = 10
 
@@ -679,29 +709,39 @@ class load(object):
 
             self.status[steptoskip] = 'SKIPPED'
 
+        # Set definition for function calls:
+        self.step_calls = {} 
+        self.step_calls['dq_init'] = calwebb_detector1.dq_init_step.DQInitStep.call
+        self.step_calls['emicorr'] = calwebb_detector1.emicorr_step.EmiCorrStep.call
+        self.step_calls['saturation'] = calwebb_detector1.saturation_step.SaturationStep.call
+        self.step_calls['superbias'] = calwebb_detector1.superbias_step.SuperBiasStep.call
+        self.step_calls['dark_sub'] = calwebb_detector1.dark_current_step.DarkCurrentStep.call
+
+        # Call to reference pixel step is typically skipped for NIRSpec/PRISM, so use our own. TODO: this should be and if statement once the refpix 
+        # is added on NIRspec/PRISM:
+        if self.mode == 'nirspec/prism':
+
+            self.step_calls['refpix'] = side_refpix_correction
+
+        else:
+
+            self.step_calls['refpix'] = calwebb_detector1.refpix_step.RefPixStep.call
+
+        self.step_calls['group_1f'] = group_1f_correction
+        self.step_calls['linearity'] = calwebb_detector1.linearity_step.LinearityStep.call
+
         # Now go step-by-step checking which steps were done. If linearity was done and saved, read it:
         if not os.path.exists(self.outputfolder+'ts_outputs/'+self.datanames[-1]+'_'+self.actual_suffix+'linearitystep.fits'):
 
-            # Set definition for function calls:
-            self.step_calls = {}
-            self.step_calls['dq_init'] = calwebb_detector1.dq_init_step.DQInitStep.call
-            self.step_calls['saturation'] = calwebb_detector1.saturation_step.SaturationStep.call
-            self.step_calls['superbias'] = calwebb_detector1.superbias_step.SuperBiasStep.call
- 
-            # Call to reference pixel step is typically skipped for NIRSpec/PRISM, so use our own. TODO: this should be and if statement once the refpix 
-            # is added on NIRspec/PRISM:
-            if self.mode == 'nirspec/prism':
+            if self.mode == 'miri/photometry':
 
-                self.step_calls['refpix'] = side_refpix_correction
+                steps = ['dq_init', 'emicorr', 'saturation', 'linearity']
 
             else:
 
-                self.step_calls['refpix'] = calwebb_detector1.refpix_step.RefPixStep.call
+                steps = ['dq_init', 'saturation', 'superbias', 'refpix', 'group_1f', 'linearity']
 
-            self.step_calls['group_1f'] = group_1f_correction
-            self.step_calls['linearity'] = calwebb_detector1.linearity_step.LinearityStep.call
-
-            for step in ['dq_init', 'saturation', 'superbias', 'refpix', 'group_1f', 'linearity']:
+            for step in steps:
 
                 # Make a difference with group_1f which handles all ramps together:
                 if step in ['group_1f']:
@@ -734,6 +774,22 @@ class load(object):
             # Check status of the loaded files:
             self.check_status(self.ramps_per_segment[-1])
             
+        # Run rest of the steps prior to the jump but after linearity:
+        if self.mode == 'miri/photometry':
+
+            steps = ['dark_sub', 'refpix']
+
+        else:
+
+            steps = ['dark_sub']
+
+        for i in range( len(self.ramps_per_segment) ):
+
+            if self.status[step] is None:
+
+                self.ramps_per_segment[i] = self.step_calls[step]( self.ramps_per_segment[i], **self.calibration_parameters[step] )
+
+
         # Now for the jump step; depends on which jump step user wants:
         if self.status['jump'] is None:
 
