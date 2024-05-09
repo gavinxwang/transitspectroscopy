@@ -783,12 +783,13 @@ class load(object):
 
             steps = ['dark_sub']
 
-        for i in range( len(self.ramps_per_segment) ):
+        for step in steps:
 
-            if self.status[step] is None:
+            for i in range( len(self.ramps_per_segment) ):
 
-                self.ramps_per_segment[i] = self.step_calls[step]( self.ramps_per_segment[i], **self.calibration_parameters[step] )
+                if self.status[step] is None:
 
+                    self.ramps_per_segment[i] = self.step_calls[step]( self.ramps_per_segment[i], **self.calibration_parameters[step] )
 
         # Now for the jump step; depends on which jump step user wants:
         if self.status['jump'] is None:
