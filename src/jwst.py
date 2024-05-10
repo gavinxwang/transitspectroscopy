@@ -608,6 +608,7 @@ class load(object):
         the STScI JWST Pipeline to do its magic.
         """
 
+        self.rateints_per_segment = []
         self.initialize_step('ramp_fit', parameters, save, suffix, outputfolder)
 
         print('\t >> Performing Rampfit step...\n')
