@@ -791,6 +791,10 @@ class load(object):
 
                     self.ramps_per_segment[i] = self.step_calls[step]( self.ramps_per_segment[i], **self.calibration_parameters[step] )
 
+            if self.status[step] is None:
+
+                if self.status[step] = 'COMPLETE'
+
         # Now for the jump step; depends on which jump step user wants:
         if self.status['jump'] is None:
 
