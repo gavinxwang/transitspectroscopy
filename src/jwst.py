@@ -635,6 +635,9 @@ class load(object):
         # Merge with self.rateints:
         self.merge_rateints_segments()
 
+        # Modify status of the step:
+        self.status['ramp_fit'] = 'COMPLETE'
+
     def detector_calibration(self, parameters = {}, use_tso_jump = True, group_1f = False, save = True, suffix = '', outputfolder = None, **kwargs):
         """
         This function performs detector-level calibration --- i.e., most of what is Stage1 in the STScI JWST pipeline,
