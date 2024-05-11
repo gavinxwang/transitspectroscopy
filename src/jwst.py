@@ -563,6 +563,11 @@ class load(object):
 
                 self.actual_suffix = ''
 
+            # If a new suffix, change it for the saved files:
+            if 'suffix' in list(self.calibration_parameters[stepname].keys()):
+
+                self.calibration_parameters[stepname]['suffix'] = self.actual_suffix+step+'step'
+
     def check_nans(self, array):
 
         self.has_nan = False
