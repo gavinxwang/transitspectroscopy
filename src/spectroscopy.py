@@ -7,8 +7,21 @@ from scipy.interpolate import splev, splrep, sproot, interp1d
 from scipy.ndimage import gaussian_filter1d, median_filter
 from scipy.optimize import fminbound
 
-import CCF
-import Marsh
+try:
+
+    import CCF
+
+except:
+
+    print('\t Warning: import CCF did not work. Some CCF utilities might not work.')
+
+try:
+
+    import Marsh
+
+except:
+
+    print('\t Warning: import Marsh did not work. The fast optimal extraction algorithm will not work.')
 
 def getP(data, centroids, aperture_radius, ron, gain, nsigma, polynomial_spacing, polynomial_order, min_column = None, max_column = None, return_flat = False, data_variance = None):
     """
