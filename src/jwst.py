@@ -526,6 +526,15 @@ class load(object):
         # running detector_calibration). If it hasn't, initialize the calibration_parameters:
         if not hasattr(self, 'calibration_parameters'):
 
+            if not hasattr(self, 'actual_suffix'):
+                   
+                 self.actual_suffix = '' 
+
+            if not hasattr(self, 'suffix'):
+
+                 self.suffix = suffix
+
+            self.calibration_parameters = {} 
             self.fill_calibration_parameters(parameters = parameters, save = save)
 
         else:
@@ -584,6 +593,24 @@ class load(object):
 
             self.has_nan = True
 
+    def interpolate_nans(self, frame, nan_location):
+
+        # Copy input frame so we save corrected pixels in there:
+        corrected_frame = copy.deepcopy(frame)
+
+        # Compute median filter:
+        mf = median_filter(median_rate, [self.calibration_parameters['tracing']['row_window'], 
+                                         self.calibration_parameters['tracing']['column_window']
+                                        ]
+                          )
+
+        # Fill nans with median filters:
+        corrected_frame[nan_locations] = mf[nan_locations]
+    
+        # Return corrected frame:
+        return corrected_frame
+
+
     def trace_spectra(self, parameters ={}, save = True, suffix = None, outputfolder = None, **kwargs):
         """
         This function performs spectral tracing to all the rates per integration in self.rateints.
@@ -603,9 +630,17 @@ class load(object):
         # To prepare the interpolator, first obtain the median integration:
         self.median_rateints = np.nanmedian(self.rateints, axis = 0)
 
-        # Interpolate through all nans; this assumes the spectra goes in the direction of the columns:
-        self.interpolate_nans(self.median_rateints)
-        
+        # Useful for the next steps is to correct any reminder nans in the median frame first; do that:
+        self.median_rateints_nan_locations = np.where( np.isnan( self.median_rateints ) )
+        self.nan_corrected_median_rateints = self.interpolate_nans( self.median_rateints, 
+                                                                    self.median_rateints_nan_locations
+                                                                  )
+
+        # Next-up, create nan-corrected rateints using this median rateints. To do this, simply scale the 
+        # median frame to local pixels for each nan:
+        for i in range
+               
+ 
 
     def fit_ramps(self, parameters = {}, save = True, suffix = None, outputfolder = None, **kwargs):
         """ 
