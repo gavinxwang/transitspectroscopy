@@ -103,36 +103,39 @@ def download(pid, obs_num, mast_api_token = None, outputfolder = None, data_prod
     indexes = []
     for i in range( len(data_products) ):
 
-        # Extract observation number:
-        data_obs_num = int(data_products[i]['obs_id'][7:10])
-
-        # Cut datasets by observation number, not FGS data::
-        if ( data_obs_num == obs_num ) and ( 'FGS' not in data_products[i]['description'] ):
-
-            # Cut further based on user's choice for data product; this will select both 2D spectra and/or imaging, plus TA frames:
-            if data_product == 'UNCAL':
-
-                if data_products[i]['productSubGroupDescription'] == 'UNCAL' and data_products[i]['productType'] == 'SCIENCE':
-                        
-                    indexes.append(i)
-
-            elif data_product == 'RAMP':
-
-                if data_products[i]['productSubGroupDescription'] == 'RAMP' and data_products[i]['productType'] == 'AUXILIARY':
-
-                    indexes.append(i)
-
-            elif data_product == 'RATEINTS':
-
-                if data_products[i]['productSubGroupDescription'] == 'RATEINTS' and data_products[i]['productType'] == 'SCIENCE':
-
-                    indexes.append(i)
-
-            elif data_product == 'DARK':
-
-                if data_products[i]['productSubGroupDescription'] == 'DARK' and data_products[i]['productType'] == 'AUXILIARY':
-
-                    indexes.append(i)
+        # Check location of observation number
+        if data_products[i]['obs_id'][7:10].isdigit(): 
+            
+            # Extract observation number:
+            data_obs_num = int(data_products[i]['obs_id'][7:10])
+    
+            # Cut datasets by observation number, not FGS data::
+            if ( data_obs_num == obs_num ) and ( 'FGS' not in data_products[i]['description'] ):
+    
+                # Cut further based on user's choice for data product; this will select both 2D spectra and/or imaging, plus TA frames:
+                if data_product == 'UNCAL':
+    
+                    if data_products[i]['productSubGroupDescription'] == 'UNCAL' and data_products[i]['productType'] == 'SCIENCE':
+                            
+                        indexes.append(i)
+    
+                elif data_product == 'RAMP':
+    
+                    if data_products[i]['productSubGroupDescription'] == 'RAMP' and data_products[i]['productType'] == 'AUXILIARY':
+    
+                        indexes.append(i)
+    
+                elif data_product == 'RATEINTS':
+    
+                    if data_products[i]['productSubGroupDescription'] == 'RATEINTS' and data_products[i]['productType'] == 'SCIENCE':
+    
+                        indexes.append(i)
+    
+                elif data_product == 'DARK':
+    
+                    if data_products[i]['productSubGroupDescription'] == 'DARK' and data_products[i]['productType'] == 'AUXILIARY':
+    
+                        indexes.append(i)
 
     # Apply mask:
     data_products = data_products[indexes]
